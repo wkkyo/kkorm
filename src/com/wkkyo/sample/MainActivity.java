@@ -1,10 +1,6 @@
 package com.wkkyo.sample;
 
-import com.wkkyo.android.orm.DBConfig;
 import com.wkkyo.android.orm.R;
-import com.wkkyo.android.orm.R.id;
-import com.wkkyo.android.orm.R.layout;
-import com.wkkyo.android.orm.R.menu;
 import com.wkkyo.sample.db.dao.UserDao;
 import com.wkkyo.sample.db.entity.User;
 
