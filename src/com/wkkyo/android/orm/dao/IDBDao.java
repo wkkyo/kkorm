@@ -26,7 +26,7 @@ public interface IDBDao<T> {
 	
 	/**
 	 * 根据sql语句查询记录
-	 * @param sql 格式为where语句条件部分，例如："dmlb = '52000' and fjm = '000005'" 
+	 * @param where 格式为where语句条件部分，例如："dmlb = '52000' and name = 'XXX'" 
 	 * @return
 	 */
 	List<T> query(String where);

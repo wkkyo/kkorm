@@ -1,7 +1,5 @@
 package com.wkkyo.android.orm.dao;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
@@ -27,15 +25,14 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.graphics.Bitmap;
 
 
 /**
- * 数据库操作工具类
+ * 数据库交互Dao
  * @author wkkyo
  * 
  */
-public class DBDao<T> implements IDBDao<T> {
+public abstract class DBDao<T> implements IDBDao<T> {
 
 	private DBOpenHelper dbHelper;
 
@@ -53,7 +50,7 @@ public class DBDao<T> implements IDBDao<T> {
 	public DBDao(Context context) {
 		ParameterizedType pt = (ParameterizedType) this.getClass().getGenericSuperclass();
 		this.clazz = (Class<T>)pt.getActualTypeArguments()[0];
-		this.dbHelper = DBOpenHelper.getInstance(context.getApplicationContext(),DBConfig.DB_PATH);
+		this.dbHelper = DBOpenHelper.getInstance(context.getApplicationContext(),DBConfig.DB_PATH,DBConfig.DB_NAME);
 		if(!clazz.isAnnotationPresent(Table.class)){
 			KKLog.d("Model 对象未注记Table");
 			return;
@@ -87,16 +84,16 @@ public class DBDao<T> implements IDBDao<T> {
 		return dbHelper;
 	}
 
-	public static byte[] bmpToByteArray(Bitmap bmp) {
-		ByteArrayOutputStream bos = new ByteArrayOutputStream();
-		try {
-			bmp.compress(Bitmap.CompressFormat.JPEG, 100, bos);
-			bos.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		return bos.toByteArray();
-	}
+//	private static byte[] bmpToByteArray(Bitmap bmp) {
+//		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+//		try {
+//			bmp.compress(Bitmap.CompressFormat.JPEG, 100, bos);
+//			bos.close();
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		}
+//		return bos.toByteArray();
+//	}
 
 	@Override
 	public T save(T t) {
@@ -147,6 +144,9 @@ public class DBDao<T> implements IDBDao<T> {
 		return query(null);
 	}
 
+	/* (non-Javadoc)
+	 * @see com.wkkyo.android.orm.dao.IDBDao#query(java.lang.String)
+	 */
 	@Override
 	public List<T> query(String where) {
 		List<T> list = new ArrayList<T>();

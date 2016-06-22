@@ -22,9 +22,9 @@ public class DBOpenHelper extends SQLiteOpenHelper{
     private final static int mNewVersion = 1;
     
 	// Instances
-//    private static HashMap<Context, DBOpenHelper> mInstances;
+//  private static HashMap<Context, DBOpenHelper> mInstances;
     /** 数据库名. */
-    private final static String mName = "data.db";
+    private static String mName = "data.db";
     
     /** 数据库文件夹全路径 */
     private static String mPath;
@@ -49,7 +49,7 @@ public class DBOpenHelper extends SQLiteOpenHelper{
 	 * @param dbPath 数据库文件全路径
 	 * @return
 	 */
-	public synchronized static DBOpenHelper getInstance(Context context,String dbPath) {
+	public synchronized static DBOpenHelper getInstance(Context context,String dbPath,String dbName) {
 		/*if(mInstances == null)
             mInstances = new HashMap<Context, DBManager>();
 
@@ -57,6 +57,9 @@ public class DBOpenHelper extends SQLiteOpenHelper{
             mInstances.put(context, new DBManager(context,sourceFile));
 
         return mInstances.get(context);*/
+		if(dbName != null && !dbName.equals(mName)){
+			mName = dbName;
+		}
 		if(instance == null || !dbPath.equals(mPath)){
 			instance = new DBOpenHelper(context,dbPath);
 		}
