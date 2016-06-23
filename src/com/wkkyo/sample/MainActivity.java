@@ -41,8 +41,8 @@ public class MainActivity extends Activity implements OnClickListener {
 		setContentView(R.layout.activity_main);
 		
 		//配置数据库参数
-		DBConfig.DB_PATH = Environment.getExternalStorageDirectory()+"/database";
-		DBConfig.DB_NAME = "test.db";
+//		DBConfig.DB_PATH = Environment.getExternalStorageDirectory()+"/database";
+//		DBConfig.DB_NAME = "test.db";
 		
 		//声明dao
 		dao = new UserDao(this);
