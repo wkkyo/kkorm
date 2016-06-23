@@ -70,7 +70,6 @@ public class MainActivity extends Activity implements OnClickListener {
 		users = dao.query();
 		adapter = new MyAdapter(this, users);
 		listView.setAdapter(adapter);
-		
 		editText = (TextView) findViewById(R.id.editText);
 	}
 
