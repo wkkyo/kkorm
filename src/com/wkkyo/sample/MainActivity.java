@@ -1,6 +1,8 @@
 package com.wkkyo.sample;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import com.wkkyo.android.orm.DBConfig;
@@ -86,6 +88,7 @@ public class MainActivity extends Activity implements OnClickListener {
 			User user = new User();
 			user.setUsername(userName);
 			user.setPassword("123456");
+			user.setBirthday(new Date());
 			dao.save(user);
 			users.add(user);
 			break;
@@ -105,6 +108,7 @@ public class MainActivity extends Activity implements OnClickListener {
 				User player = new User();
 				player.setUsername(userName+"_"+i);
 				player.setPassword("123456");
+				player.setBirthday(new Date());
 				addUsers.add(player);
 			}
 			dao.save(addUsers);
@@ -139,7 +143,7 @@ public class MainActivity extends Activity implements OnClickListener {
 			convertView = LayoutInflater.from(mContext).inflate(android.R.layout.simple_list_item_1, null);
 			User user = mUsers.get(position);
 			TextView textView = (TextView) convertView.findViewById(android.R.id.text1);
-			textView.setText(user.getUsername());
+			textView.setText(user.getUsername()+","+new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(user.getBirthday()));
 			return convertView;
 		}
 

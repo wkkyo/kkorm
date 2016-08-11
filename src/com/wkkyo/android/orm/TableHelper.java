@@ -3,6 +3,7 @@ package com.wkkyo.android.orm;
 import java.lang.reflect.Field;
 import java.sql.Blob;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -168,6 +169,8 @@ public final class TableHelper {
 			type = "FLOAT";
 		} else if (clazz == Blob.class) {
 			type = "BLOB";
+		} else if (clazz == Date.class) {
+			type = "TEXT";
 		} else if(clazz instanceof Class){
 			type = getColumnType(getIdColumnField(clazz).getType());
 		} else{

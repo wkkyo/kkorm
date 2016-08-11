@@ -5,7 +5,10 @@ import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.sql.Blob;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantLock;
@@ -45,6 +48,8 @@ public abstract class DBDao<T> implements IDBDao<T> {
 	private List<Field> columnFields;
 	
     private static final ReentrantLock lock = new ReentrantLock();
+    
+    private static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
 	@SuppressWarnings("unchecked")
 	public DBDao(Context context) {
@@ -486,6 +491,12 @@ public abstract class DBDao<T> implements IDBDao<T> {
 				value = cursor.getDouble(index);
 			} else if (Float.TYPE == field.getType() || field.getType() == Float.class) {
 				value = cursor.getFloat(index);
+			} else if (Date.class == field.getType()) {
+				try {
+					value = dateFormat.parse(cursor.getString(index));
+				} catch (ParseException e) {
+					e.printStackTrace();
+				}
 			} else if (field.getType() == Blob.class) {
 				value = cursor.getBlob(index);
 			} else {
@@ -663,7 +674,12 @@ public abstract class DBDao<T> implements IDBDao<T> {
 							}else if(columnName.equals("")){
 								columnName = field.getName();
 							}
-							contentValues.put(columnName, fieldValue.toString());
+							if(field.getType() == Date.class){
+								String dateValue = dateFormat.format(fieldValue);
+								contentValues.put(columnName, dateValue);
+							}else{
+								contentValues.put(columnName, fieldValue.toString());
+							}
 						}
 					}
 				}

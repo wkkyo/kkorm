@@ -1,5 +1,7 @@
 package com.wkkyo.sample.db.entity;
 
+import java.util.Date;
+
 import com.wkkyo.android.orm.annotation.Column;
 import com.wkkyo.android.orm.annotation.Id;
 import com.wkkyo.android.orm.annotation.Table;
@@ -24,6 +26,9 @@ public class User implements java.io.Serializable {
 
 	@Column
 	private String password;
+	
+	@Column
+	private Date birthday;
 
 	// Constructors
 
@@ -59,5 +64,13 @@ public class User implements java.io.Serializable {
 
 	public void setPassword(String password) {
 		this.password = password;
+	}
+
+	public Date getBirthday() {
+		return birthday;
+	}
+
+	public void setBirthday(Date birthday) {
+		this.birthday = birthday;
 	}
 }
