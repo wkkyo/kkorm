@@ -4,7 +4,6 @@ import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.sql.Blob;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -55,7 +54,7 @@ public abstract class DBDao<T> implements IDBDao<T> {
 	public DBDao(Context context) {
 		ParameterizedType pt = (ParameterizedType) this.getClass().getGenericSuperclass();
 		this.clazz = (Class<T>)pt.getActualTypeArguments()[0];
-		this.dbHelper = DBOpenHelper.getInstance(context.getApplicationContext(),DBConfig.DB_PATH,DBConfig.DB_NAME,DBConfig.DB_VERSION);
+		this.dbHelper = DBOpenHelper.getInstance(context,DBConfig.DB_PATH,DBConfig.DB_NAME,DBConfig.DB_VERSION);
 		if(!clazz.isAnnotationPresent(Table.class)){
 			KKLog.d("Model 对象未注记Table");
 			return;
@@ -77,22 +76,24 @@ public abstract class DBDao<T> implements IDBDao<T> {
 			}
 		}
 		SQLiteDatabase db = startReadableDatabase();
-		if(!TableHelper.checkTableExist(db, clazz)){
-			closeDatabase(false);
-			db = startWritableDatabase();
-			TableHelper.createTable(db, clazz);
-			closeDatabase(true);
-		}else{
-			//数据库升级
-			if(dbHelper.needToUpdate()){
+		if(db != null){
+			if(!TableHelper.checkTableExist(db, clazz)){
 				closeDatabase(false);
 				db = startWritableDatabase();
-				updateTable(db,dbHelper.getOldVersion(),dbHelper.getNewVersion());
+				TableHelper.createTable(db, clazz);
 				closeDatabase(true);
 			}else{
-				closeDatabase(false);
+				//数据库升级
+				if(dbHelper.needToUpdate()){
+					closeDatabase(false);
+					db = startWritableDatabase();
+					updateTable(db,dbHelper.getOldVersion(),dbHelper.getNewVersion());
+					closeDatabase(true);
+				}else{
+					closeDatabase(false);
+				}
 			}
-		}
+		}		
 	}
 	
 	/*public DBOpenHelper getDbHelper() {
@@ -337,7 +338,7 @@ public abstract class DBDao<T> implements IDBDao<T> {
 		if(tableName == null || "".equals(tableName)){
 			tableName = clazz.getSimpleName();
 		}
-		String tempTableName = tableName+"_temp";
+		String tempTableName = tableName+"_temp_"+oldVersion;
 		
 		StringBuilder alterSql = new StringBuilder();
 		alterSql.append("ALTER TABLE ");
@@ -348,20 +349,36 @@ public abstract class DBDao<T> implements IDBDao<T> {
 		
 		TableHelper.createTable(db, clazz);
 		
-		String[] columnArr = TableHelper.getColumnNames(db, tempTableName);
-		String columns = TableHelper.join(columnArr, ",", 0, columnArr.length);
+		String[] oldColumnArr = TableHelper.getColumnNames(db, tempTableName);
 		
-		StringBuilder insertSql = new StringBuilder();
-		insertSql.append("INSERT INTO ");
-		insertSql.append(tableName);
-		insertSql.append(" (" + columns + ") ");
-		insertSql.append(" SELECT " + columns + " FROM " + tempTableName);
-		db.execSQL(insertSql.toString());
-		
-		StringBuilder dropSql = new StringBuilder();
-		dropSql.append("DROP TABLE IF EXISTS ");
-		dropSql.append(tempTableName);
-		db.execSQL(dropSql.toString());
+		String[] newColumnArr = TableHelper.getColumnNames(db, tableName);
+		List<String> findColumns = new ArrayList<String>();
+		for(String column:newColumnArr){
+			for(String oldColumn:oldColumnArr){
+				if(column.equals(oldColumn)){
+					findColumns.add(column);
+					break;
+				}
+			}
+		}
+		if(findColumns.size() > 0){
+			String[] columns = new String[findColumns.size()];
+			for(int i = 0;i<findColumns.size();i++){
+				columns[i] = findColumns.get(i);
+			}
+			String insertColumns = TableHelper.join(columns, ",", 0, columns.length);
+			StringBuilder insertSql = new StringBuilder();
+			insertSql.append("INSERT INTO ");
+			insertSql.append(tableName);
+			insertSql.append(" (" + insertColumns + ") ");
+			insertSql.append(" SELECT " + insertColumns + " FROM " + tempTableName);
+			db.execSQL(insertSql.toString());
+			
+			StringBuilder dropSql = new StringBuilder();
+			dropSql.append("DROP TABLE IF EXISTS ");
+			dropSql.append(tempTableName);
+			db.execSQL(dropSql.toString());
+		}
 	}
 	
 	private long getCount(String where,SQLiteDatabase db){
@@ -401,6 +418,7 @@ public abstract class DBDao<T> implements IDBDao<T> {
 		}
 		if(idField == null && businessField == null){
 			KKLog.d("Model 对象未注解主键");
+			mInsert(entity, db);
 			return;
 		}
 		if(businessField == null){
@@ -486,6 +504,17 @@ public abstract class DBDao<T> implements IDBDao<T> {
 	}
 	
 	/**
+	 * 新增记录。
+	 * @param entity
+	 * @param db
+	 * @return
+	 */
+	private long mInsert(T entity,SQLiteDatabase db){
+		ContentValues contentValues = setContentValues(entity);
+		return db.insert(tableName, null, contentValues);
+	}
+	
+	/**
 	 * 获取写数据库，启用事务.
 	 *
 	 */
@@ -548,7 +577,7 @@ public abstract class DBDao<T> implements IDBDao<T> {
 				} catch (ParseException e) {
 					e.printStackTrace();
 				}
-			} else if (field.getType() == Blob.class) {
+			} else if (byte[].class == field.getType()) {
 				value = cursor.getBlob(index);
 			} else {
 				value = cursor.getString(index);
@@ -728,6 +757,8 @@ public abstract class DBDao<T> implements IDBDao<T> {
 							if(field.getType() == Date.class){
 								String dateValue = dateFormat.format(fieldValue);
 								contentValues.put(columnName, dateValue);
+							}else if(byte[].class == field.getType()){
+								contentValues.put(columnName, (byte[])fieldValue);
 							}else{
 								contentValues.put(columnName, fieldValue.toString());
 							}
