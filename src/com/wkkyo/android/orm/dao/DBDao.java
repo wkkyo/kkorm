@@ -55,7 +55,7 @@ public abstract class DBDao<T> implements IDBDao<T> {
 	public DBDao(Context context) {
 		ParameterizedType pt = (ParameterizedType) this.getClass().getGenericSuperclass();
 		this.clazz = (Class<T>)pt.getActualTypeArguments()[0];
-		this.dbHelper = DBOpenHelper.getInstance(context.getApplicationContext(),DBConfig.DB_PATH,DBConfig.DB_NAME);
+		this.dbHelper = DBOpenHelper.getInstance(context.getApplicationContext(),DBConfig.DB_PATH,DBConfig.DB_NAME,DBConfig.DB_VERSION);
 		if(!clazz.isAnnotationPresent(Table.class)){
 			KKLog.d("Model 对象未注记Table");
 			return;
@@ -78,16 +78,26 @@ public abstract class DBDao<T> implements IDBDao<T> {
 		}
 		SQLiteDatabase db = startReadableDatabase();
 		if(!TableHelper.checkTableExist(db, clazz)){
+			closeDatabase(false);
 			db = startWritableDatabase();
 			TableHelper.createTable(db, clazz);
 			closeDatabase(true);
+		}else{
+			//数据库升级
+			if(dbHelper.needToUpdate()){
+				closeDatabase(false);
+				db = startWritableDatabase();
+				updateTable(db,dbHelper.getOldVersion(),dbHelper.getNewVersion());
+				closeDatabase(true);
+			}else{
+				closeDatabase(false);
+			}
 		}
-		closeDatabase(false);
 	}
 	
-	public DBOpenHelper getDbHelper() {
+	/*public DBOpenHelper getDbHelper() {
 		return dbHelper;
-	}
+	}*/
 
 //	private static byte[] bmpToByteArray(Bitmap bmp) {
 //		ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -137,7 +147,13 @@ public abstract class DBDao<T> implements IDBDao<T> {
 	
 	@Override
 	public T get(Serializable id) {
-		List<T> list = query(idColumn + " = " + id);
+		String idValue;
+		if(id instanceof String){
+			idValue = "'"+id+"'";
+		}else{
+			idValue = id.toString();
+		}
+		List<T> list = query(idColumn + " = " + idValue);
 		if (list.size() == 1) {
 			return list.get(0);
 		}
@@ -311,6 +327,41 @@ public abstract class DBDao<T> implements IDBDao<T> {
 	public String generatorBusinessId(String prefix,String suffix){
 		String businessIdValue = UUID.randomUUID().toString().replace("-", "");
 		return prefix+businessIdValue+suffix;
+	}
+	
+	/**
+	 * 数据库版本更新时可以覆盖，如果只新增了列，可以选择不覆盖。
+	 */
+	protected void updateTable(SQLiteDatabase db,int oldVersion,int newVersion){
+		String tableName = clazz.getAnnotation(Table.class).name();
+		if(tableName == null || "".equals(tableName)){
+			tableName = clazz.getSimpleName();
+		}
+		String tempTableName = tableName+"_temp";
+		
+		StringBuilder alterSql = new StringBuilder();
+		alterSql.append("ALTER TABLE ");
+		alterSql.append(tableName);
+		alterSql.append(" RENAME TO ");
+		alterSql.append(tempTableName);
+		db.execSQL(alterSql.toString());
+		
+		TableHelper.createTable(db, clazz);
+		
+		String[] columnArr = TableHelper.getColumnNames(db, tempTableName);
+		String columns = TableHelper.join(columnArr, ",", 0, columnArr.length);
+		
+		StringBuilder insertSql = new StringBuilder();
+		insertSql.append("INSERT INTO ");
+		insertSql.append(tableName);
+		insertSql.append(" (" + columns + ") ");
+		insertSql.append(" SELECT " + columns + " FROM " + tempTableName);
+		db.execSQL(insertSql.toString());
+		
+		StringBuilder dropSql = new StringBuilder();
+		dropSql.append("DROP TABLE IF EXISTS ");
+		dropSql.append(tempTableName);
+		db.execSQL(dropSql.toString());
 	}
 	
 	private long getCount(String where,SQLiteDatabase db){

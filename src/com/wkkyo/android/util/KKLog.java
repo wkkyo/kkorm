@@ -12,9 +12,13 @@ import android.util.Log;
 public final class KKLog {
 	
 	private static final String DEBUG_TAG = "KKAPI";
+	
+	public static int LEVEL = 1;
 
 	public static void d(String msg){
-		Log.d(DEBUG_TAG, msg);
+		if(LEVEL == 1){
+			Log.d(DEBUG_TAG, msg);
+		}
 	}
 }
 

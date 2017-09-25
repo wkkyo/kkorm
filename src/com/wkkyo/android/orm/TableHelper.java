@@ -20,10 +20,16 @@ import android.database.sqlite.SQLiteDatabase;
 
 public final class TableHelper {
 	
-	private final static Map<String,Boolean> TABLES = new HashMap<String, Boolean>();
+	final static Map<String,Boolean> TABLES = new HashMap<String, Boolean>();
 	
 	private static String dbPath;
 	
+	/**
+	 * 判断表是否已经存在
+	 * @param db
+	 * @param clazz
+	 * @return
+	 */
 	public final static boolean checkTableExist(SQLiteDatabase db,Class<?> clazz){
 		String tableName = clazz.getAnnotation(Table.class).name();
 		if(tableName == null || "".equals(tableName)){
@@ -38,7 +44,7 @@ public final class TableHelper {
 		}
 		Cursor cursor = null;
         try {
-            String sql = "SELECT COUNT(*) AS c FROM sqlite_master WHERE type ='table' AND name ='"+ tableName + "'";
+            String sql = "SELECT COUNT(*) AS c FROM sqlite_master WHERE type = 'table' AND name = '"+ tableName + "'";
             cursor = db.rawQuery(sql, null);
             if (cursor != null && cursor.moveToNext()) {
                 int count = cursor.getInt(0);
@@ -94,6 +100,12 @@ public final class TableHelper {
 						columnName = field.getName();
 					}
 					sql.append(columnName).append(" ").append(columnType);
+					if(column.defaultValue() != null && columnType.equals("TEXT")){
+						sql.append(" DEFAULT ");
+						sql.append("'");
+						sql.append(column.defaultValue());
+						sql.append("'");
+					}
 					if(field.isAnnotationPresent(Id.class)){
 						boolean autoincrement = field.getAnnotation(Id.class).autoincrement();
 						if(autoincrement && (field.getType() == Integer.TYPE 
@@ -178,7 +190,111 @@ public final class TableHelper {
 		}
 		return type;
 	}
+	
+	public static String[] getColumnNames(SQLiteDatabase db, String tableName) {
+		String[] columnNames = null;
+		Cursor c = null;
+		try {
+			c = db.rawQuery("PRAGMA table_info(" + tableName + ")", null);
+			if (null != c) {
+				int columnIndex = c.getColumnIndex("name");
+				if (columnIndex == -1) {
+					return null;
+				}
 
+				int index = 0;
+				columnNames = new String[c.getCount()];
+				for (c.moveToFirst(); !c.isAfterLast(); c.moveToNext()) {
+					columnNames[index] = c.getString(columnIndex);
+					index++;
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			c.close();
+		}
+		return columnNames;
+	}
+	
+	public static String join(Object[] array, String separator, int startIndex, int endIndex) {
+        if (array == null) {
+            return null;
+        }
+        if (separator == null) {
+            separator = "";
+        }
+
+        // endIndex - startIndex > 0:   Len = NofStrings *(len(firstString) + len(separator))
+        //           (Assuming that all Strings are roughly equally long)
+        int bufSize = (endIndex - startIndex);
+        if (bufSize <= 0) {
+            return "";
+        }
+
+        bufSize *= ((array[startIndex] == null ? 16 : array[startIndex].toString().length())
+                        + separator.length());
+
+        StringBuffer buf = new StringBuffer(bufSize);
+
+        for (int i = startIndex; i < endIndex; i++) {
+            if (i > startIndex) {
+                buf.append(separator);
+            }
+            if (array[i] != null) {
+                buf.append(array[i]);
+            }
+        }
+        return buf.toString();
+    }
+	
+//	static void updateTables(SQLiteDatabase db, int oldVersion,int newVersion){
+//		if(DBConfig.updateClasses != null){
+//			for(Class<?> clazz:DBConfig.updateClasses){
+//				if(!clazz.isAnnotationPresent(Table.class)){
+//					KKLog.d("Model 对象未注记Table");
+//					return;
+//				}
+//				if(checkTableExist(db, clazz)){
+//					if(!clazz.isAnnotationPresent(Table.class)){
+//						return;
+//					}else{
+//						String tableName = clazz.getAnnotation(Table.class).name();
+//						if(tableName == null || "".equals(tableName)){
+//							tableName = clazz.getSimpleName();
+//						}
+//						String tempTableName = tableName+"_temp";
+//						
+//						StringBuilder alterSql = new StringBuilder();
+//						alterSql.append("ALTER TABLE ");
+//						alterSql.append(tableName);
+//						alterSql.append(" RENAME TO ");
+//						alterSql.append(tempTableName);
+//						db.execSQL(alterSql.toString());
+//						
+//						createTable(db, clazz);
+//						
+//						String[] columnArr = getColumnNames(db, tempTableName);
+//						String columns = join(columnArr, ",", 0, columnArr.length);
+//						
+//						StringBuilder insertSql = new StringBuilder();
+//						insertSql.append("INSERT INTO ");
+//						insertSql.append(tableName);
+//						insertSql.append(" (" + columns + ") ");
+//						insertSql.append(" SELECT " + columns + " FROM " + tempTableName);
+//						db.execSQL(insertSql.toString());
+//						
+//						StringBuilder dropSql = new StringBuilder();
+//						dropSql.append("DROP TABLE IF EXISTS ");
+//						dropSql.append(tempTableName);
+//						db.execSQL(dropSql.toString());
+//						
+//						TABLES.put(tableName, true);
+//					}
+//				}
+//			}
+//		}
+//	}
 	
 	/**
 	 * 创建表.
