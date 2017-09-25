@@ -179,7 +179,7 @@ public final class TableHelper {
 			type = "DOUBLE";
 		} else if (Float.TYPE == clazz || clazz == Float.class) {
 			type = "FLOAT";
-		} else if (clazz == Blob.class) {
+		} else if (clazz == byte[].class) {
 			type = "BLOB";
 		} else if (clazz == Date.class) {
 			type = "TEXT";
